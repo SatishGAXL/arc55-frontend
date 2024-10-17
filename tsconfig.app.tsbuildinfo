@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/config.tsx","./src/main.tsx","./src/utils.ts","./src/vite-env.d.ts","./src/components/nftclaim.tsx","./src/components/referralclaim1.tsx","./src/components/referralclaim2.tsx","./src/components/tokentransfer.tsx"],"version":"5.6.2"}
