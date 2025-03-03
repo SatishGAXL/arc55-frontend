@@ -17,6 +17,14 @@ import { TX_URL } from "../config";
 import { useNavigate } from "react-router-dom";
 import { WalletAccount } from "@txnlab/use-wallet-react";
 
+/**
+ * Component for creating a MultiSig account.
+ *
+ * @param {Object} props - The component props.
+ * @param {MessageInstance} props.messageApi - Ant Design's message API for displaying messages.
+ * @param {WalletAccount} props.activeAccount - The currently active wallet account.
+ * @param {function} props.transactionSigner - Function to sign transactions.
+ */
 export const CreateMultiSig = ({
   messageApi,
   activeAccount,
@@ -29,9 +37,12 @@ export const CreateMultiSig = ({
     indexesToSign: number[]
   ) => Promise<Uint8Array[]>;
 }) => {
+  // Form instance for managing the form state
   const [form] = Form.useForm();
+  // Hook to navigate between routes
   const navigate = useNavigate();
 
+  // Layout configuration for form items
   const formItemLayout = {
     labelCol: {
       xs: { span: 24 },
@@ -43,6 +54,7 @@ export const CreateMultiSig = ({
     },
   };
 
+  // Layout configuration for form items without labels
   const formItemLayoutWithOutLabel = {
     wrapperCol: {
       xs: { span: 24, offset: 0 },
@@ -50,8 +62,16 @@ export const CreateMultiSig = ({
     },
   };
 
+  /**
+   * Handles the form submission.
+   *
+   * @param {FormInstance} form - The form instance.
+   */
   const onClick = async (form: FormInstance) => {
+    // Get all form values
     const values = await form.getFieldsValue();
+
+    // Validate that at least 2 addresses are provided
     if (values.addresses.length < 2) {
       error(
         messageApi,
@@ -59,6 +79,8 @@ export const CreateMultiSig = ({
       );
       return;
     }
+
+    // Validate that the number of required signatures does not exceed the number of addresses
     if (values.signaturesRequired > values.addresses.length) {
       error(
         messageApi,
@@ -66,6 +88,8 @@ export const CreateMultiSig = ({
       );
       return;
     }
+
+    // Validate that at least 1 signature is required
     if (values.signaturesRequired < 1) {
       error(
         messageApi,
@@ -74,9 +98,12 @@ export const CreateMultiSig = ({
       return;
     }
 
+    // Generate a random key for the message
     const key = generateRandomString(10);
     openMessage(messageApi, key, "Deploying a new Multisig Contract...");
+
     try {
+      // Generate the multisig address
       const msig_addr = algosdk.multisigAddress({
         version: 1,
         threshold: Number(values.signaturesRequired),
@@ -84,6 +111,7 @@ export const CreateMultiSig = ({
       });
       console.log("msig_addr", msig_addr);
 
+      // Initialize the Multisig App Client
       const appClient = new MsigAppClient(
         {
           resolveBy: "id",
@@ -92,8 +120,7 @@ export const CreateMultiSig = ({
         algodClient
       );
 
-      // Deploy (outside of ARC55)
-
+      // Deploy the contract
       const deployment = await appClient.create.deploy(
         {
           admin: ALGORAND_ZERO_ADDRESS_STRING,
@@ -107,6 +134,7 @@ export const CreateMultiSig = ({
       );
       const app_id = deployment.appId;
 
+      // Set up the Multisig contract
       openMessage(messageApi, key, "Setting up Multisig Contract...");
       const setup = await appClient.arc55Setup(
         {
@@ -121,8 +149,12 @@ export const CreateMultiSig = ({
         }
       );
       console.log(deployment.appId);
+
+      // Transfer test tokens to the contract and multisig addresses
       await transferTestTokens(deployment.appAddress);
       await transferTestTokens(msig_addr);
+
+      // Display a success message and navigate to the multisig details page
       closeMessage(
         messageApi,
         key,
@@ -134,6 +166,7 @@ export const CreateMultiSig = ({
       );
       navigate(`/multisig/${app_id}`);
     } catch (e: any) {
+      // Display an error message if something goes wrong
       closeMessage(messageApi, key, "error", e.message);
     }
   };

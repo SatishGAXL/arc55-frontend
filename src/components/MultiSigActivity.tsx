@@ -17,6 +17,12 @@ import { TX_URL } from "../config";
 import { WalletAccount, StorageAdapter } from "@txnlab/use-wallet-react";
 import { LOCAL_STORAGE_MNEMONIC_KEY } from "@txnlab/use-wallet";
 
+/**
+ * Combines a uint64 and a uint8 into a single Uint8Array.
+ * @param {number} uint64 - The uint64 value.
+ * @param {number} uint8 - The uint8 value.
+ * @returns {Uint8Array} - The combined Uint8Array.
+ */
 function combineUint64AndUint8(uint64: number, uint8: number) {
   const uint64buffer = algosdk.bigIntToBytes(uint64, 8);
   const uint8buffer = algosdk.bigIntToBytes(uint8, 1);
@@ -26,6 +32,12 @@ function combineUint64AndUint8(uint64: number, uint8: number) {
   return combinedbuffer;
 }
 
+/**
+ * Combines an Algorand address and a uint64 into a single Uint8Array.
+ * @param {string} address - The Algorand address.
+ * @param {number} uint64 - The uint64 value.
+ * @returns {Uint8Array} - The combined Uint8Array.
+ */
 function combineAddressAndUint64(address: string, uint64: number) {
   const addressbuffer = algosdk.decodeAddress(address).publicKey;
   const uint64buffer = algosdk.bigIntToBytes(uint64, 8);
@@ -35,6 +47,12 @@ function combineAddressAndUint64(address: string, uint64: number) {
   return combinedbuffer;
 }
 
+/**
+ * Calculates the remaining time until a transaction is valid or determines if it has expired.
+ * @param {number} currentRound - The current Algorand round.
+ * @param {number} lastRound - The last round for which the transaction is valid.
+ * @returns {number} - The remaining time in seconds (positive) or the time since expiration in seconds (negative).
+ */
 function validTill(currentRound: number, lastRound: number) {
   //each block is 2.8 secs calculate the time & return remaining time in human readable format or return expired if currentRound is greater than lastRound
   if (currentRound > lastRound) {
@@ -43,6 +61,9 @@ function validTill(currentRound: number, lastRound: number) {
   return Math.round((lastRound - currentRound) * 2.8);
 }
 
+/**
+ * Type definition for transaction details.
+ */
 type TransactionDetails = {
   txnBytes: Uint8Array;
   txn: Transaction;
@@ -56,6 +77,14 @@ type TransactionDetails = {
   group: number;
 };
 
+/**
+ * Component for displaying and interacting with a MultiSig account's activity.
+ * @param {Object} props - The component props.
+ * @param {MessageInstance} props.messageApi - Ant Design's message API for displaying messages.
+ * @param {React.Dispatch<React.SetStateAction<number>>} props.setCurrent - Function to set the current step in the parent component.
+ * @param {WalletAccount} props.activeAccount - The currently active wallet account.
+ * @param {(txnGroup: Transaction[], indexesToSign: number[]) => Promise<Uint8Array[]>} props.transactionSigner - Function to sign transactions.
+ */
 export const MultiSigActivity = ({
   messageApi,
   setCurrent,
@@ -70,7 +99,9 @@ export const MultiSigActivity = ({
     indexesToSign: number[]
   ) => Promise<Uint8Array[]>;
 }) => {
+  // Extract the appid from the URL parameters
   const { appid } = useParams();
+  // State variables
   const [appAddress, setAppAddress] = useState<string>("");
   const [threshold, setThreshold] = useState(0);
   const [addresses, setAddresses] = useState<
@@ -80,20 +111,25 @@ export const MultiSigActivity = ({
   const [nonce, setNonce] = useState<number>(0);
   const [multiSig, setMultiSig] = useState<string>("");
   const [isCreatingTransaction, setIsCreatingTransaction] = useState(false);
+  // Hook for navigation
   const navigate = useNavigate();
   const [txns, setTxns] = useState<TransactionDetails[]>([]);
 
+  // useEffect hook to fetch application details when the component mounts or when the appid changes
   useEffect(() => {
     async function appdetails() {
+      // Search for the application using the indexer
       const appdetails = await indexerClient
         .searchForApplications()
         .index(Number(appid))
         .do();
+      // If the application is not found, display an error message and redirect to the home page
       if (appdetails.applications.length !== 1) {
         error(messageApi, "MultiSignature not found");
         // redirect to home page
         return navigate("/");
       }
+      // Initialize the Multisig App Client
       const appClient = new MsigAppClient(
         {
           resolveBy: "id",
@@ -101,8 +137,10 @@ export const MultiSigActivity = ({
         },
         algodClient
       );
+      // Get the application reference
       const appReference = await appClient.appClient.getAppReference();
       setAppAddress(appReference.appAddress);
+      // Get the global state of the application
       const global = await appClient.getGlobalState();
       if (global.arc55_admin) {
         setAdmin(algosdk.encodeAddress(global.arc55_admin.asByteArray()));
@@ -195,6 +233,10 @@ export const MultiSigActivity = ({
     appdetails();
   }, []);
 
+  /**
+   * Retrieves the next available group ID for a new transaction.
+   * @returns {Promise<number>} - The next available group ID.
+   */
   const getNewGroupId = async () => {
     const appClient = new MsigAppClient(
       {
@@ -213,6 +255,9 @@ export const MultiSigActivity = ({
     }
   };
 
+  /**
+   * Creates a new transaction for the MultiSig account.
+   */
   const createTransaction = async () => {
     const key = generateRandomString(10);
     openMessage(messageApi, key, `Creating a new transaction`);
@@ -303,6 +348,11 @@ export const MultiSigActivity = ({
   const decoder = new TextDecoder();
   const [isSigning, setIsSigning] = useState(false);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  /**
+   * Signs a given transaction.
+   * @param {TransactionDetails} txn - The transaction details.
+   */
   const makeSign = async (txn: TransactionDetails) => {
     setIsSigning(true);
     const key = generateRandomString(10);
@@ -358,6 +408,10 @@ export const MultiSigActivity = ({
     }
   };
 
+  /**
+   * Broadcasts a given transaction.
+   * @param {TransactionDetails} txn - The transaction details.
+   */
   const broadcastTransaction = async (txn: TransactionDetails) => {
     setIsBroadcasting(true);
     const key = generateRandomString(10);
@@ -416,6 +470,11 @@ export const MultiSigActivity = ({
     }
   };
 
+  /**
+   * Renders the transaction activity (sign/broadcast buttons) based on the transaction details.
+   * @param {TransactionDetails} txn - The transaction details.
+   * @returns {JSX.Element} - The JSX element containing the transaction activity.
+   */
   const renderTxnActivity = (txn: TransactionDetails) => {
     const myAddress = activeAccount.address;
     const isTreasholdReached =
@@ -490,12 +549,15 @@ export const MultiSigActivity = ({
     );
   };
 
+  // State to manage the expanded card
   const [expandedCard, setExpandedCard] = useState(-1);
 
+  // Set the last transaction card as expanded by default
   useEffect(() => {
     setExpandedCard(txns.length - 1);
   }, [txns]);
 
+  // Render the component
   return activeAccount ? (
     <div className="section">
       <ShowList

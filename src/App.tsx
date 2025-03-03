@@ -14,11 +14,15 @@ import { Dropdown, Space, Steps, Button, message } from "antd";
 import { error } from "./utils";
 
 function App() {
+  // Ant Design message API
   const [messageApi, contextHolder] = message.useMessage();
+  // Current step in the process
   const [current, setCurrent] = useState(0);
+  // Wallet information from useWallet hook
   const { wallets, activeWallet, activeAccount, transactionSigner } =
     useWallet();
 
+  // Map wallets to dropdown menu items
   const wlist = wallets.map((wallet) => ({
     label: wallet.isConnected ? (
       <>
@@ -59,6 +63,7 @@ function App() {
       }
     },
   }));
+  // Items for the wallet dropdown menu
   const items: MenuProps["items"] = [
     ...wlist,
     {

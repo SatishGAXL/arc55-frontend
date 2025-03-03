@@ -1,34 +1,27 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import "./index.css";
 import {
-  NetworkId,
   WalletId,
   WalletManager,
   WalletProvider,
 } from "@txnlab/use-wallet-react";
+import { NETWORK } from "./config.ts";
 
+// Initialize WalletManager with configurations
 const walletManager = new WalletManager({
   wallets: [
-    WalletId.DEFLY,
-    WalletId.PERA,
-    WalletId.EXODUS,
-    {
-      id: WalletId.WALLETCONNECT,
-      options: { projectId: "2acd95086e53e4a7cc9c4880b68190dc" },
-    },
-    {
-      id: WalletId.LUTE,
-      options: { siteName: "POMA MVP" },
-    },
+    // Enable Mnemonic wallet with persistence
     { id: WalletId.MNEMONIC, options: { persistToStorage: true } },
   ],
-  network: NetworkId.TESTNET,
+  // Set the network to TestNet
+  network: NETWORK,
 });
 
+// Render the application wrapped with WalletProvider
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    {/* Provide the wallet manager to the application */}
     <WalletProvider manager={walletManager}>
       <App />
     </WalletProvider>
